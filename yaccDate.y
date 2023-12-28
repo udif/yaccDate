@@ -11,7 +11,7 @@
 
 %{
 
-package main
+package yaccDate
 
 import (
 	"bufio"

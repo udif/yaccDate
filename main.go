@@ -7,7 +7,7 @@
 //	% go generate
 //	% go build
 
-//go:generate goyacc -p yaccDate -o yaccDate.go yaccDate.y
+//go:generate goyacc -p yaccDate -o yaccDate/yaccDate.go yaccDate/yaccDate.y
 
 // Expr is a simple expression evaluator that serves as a working example of
 // how to use Go's yacc implementation.
@@ -17,6 +17,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+
+	"github.com/udif/yaccDate"
 )
 
 func main() {
@@ -25,7 +27,6 @@ func main() {
 	for {
 		fmt.Print("Enter text: ")
 		text, _ := reader.ReadString('\n')
-		lexer := NewLexer(text)
-		fmt.Println(yaccDateParse(lexer), lexer.result)
+		fmt.Println(yaccDate.FlexDateToTime(text))
 	}
 }
