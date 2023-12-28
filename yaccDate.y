@@ -11,7 +11,7 @@
 
 %{
 
-package yaccDate
+package main
 
 import (
 	"bufio"
@@ -298,14 +298,3 @@ func FlexDateToTime(dateStr string) time.Time {
 	myzone := time.FixedZone("my_time_zone", lexer.result[6])
 	return time.Date(lexer.result[5], time.Month(lexer.result[4]), lexer.result[3], lexer.result[2], lexer.result[1], lexer.result[0], 0, myzone)
 }
-
-//func main() {
-//	yaccDateDebug = 1
-//	reader := bufio.NewReader(os.Stdin)
-//	for {
-//		fmt.Print("Enter text: ")
-//		text, _ := reader.ReadString('\n')
-//		lexer := NewLexer(text)
-//		fmt.Println(yaccDateParse(lexer), lexer.result)
-//	}
-//}
