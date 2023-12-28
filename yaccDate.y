@@ -289,7 +289,7 @@ func (l *Lexer) Error(e string) {
 	fmt.Printf("Error: %s\n", e)
 }
 
-func flexDateToTime(dateStr string) time.Time {
+func FlexDateToTime(dateStr string) time.Time {
 	lexer := NewLexer(dateStr)
 	if yaccDateParse(lexer) == 1 {
 		log.Fatal("Cannot parse date:", dateStr)

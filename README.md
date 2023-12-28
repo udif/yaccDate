@@ -28,4 +28,8 @@ import (
 ```
 
 Call the following function:
-`func flexDateToTime(dateStr string) time.Time {}`
+`func FlexDateToTime(dateStr string) time.Time {}`
+
+License
+-------
+
