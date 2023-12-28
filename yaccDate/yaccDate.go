@@ -2,7 +2,7 @@
 
 //line yaccDate.y:12
 
-package main
+package yaccDate
 
 import __yyfmt__ "fmt"
 
