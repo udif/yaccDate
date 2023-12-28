@@ -38,10 +38,10 @@ import (
 	arr [7]int
 }
 
-%token NUM2 NUM4 WEEKDAY MONTH TIMEZONE '+' '-' ':' UNKNOWN
+%token NUM2 NUM4 WEEKDAY MONTH TIMEZONE '+' '-' ':' '(' ')' UNKNOWN
 
 %type <arr>  top date_string datetime2 datetime date time
-%type <ival> year month day second minute hour sign tzoffset timezone TIMEZONE NUM2 NUM4 MONTH
+%type <ival> year month day second minute hour sign tzoffset timezone tz_or_offset TIMEZONE NUM2 NUM4 MONTH
 
 %%
 
@@ -52,7 +52,7 @@ top:
 	}
 
 date_string:
-    datetime2 timezone
+    datetime2 tz_or_offset
 	{
 		$$ = $1
 		$$[6] = $2
@@ -76,7 +76,13 @@ datetime:
 
 timezone:
     TIMEZONE { $$ = $1 }
+  | '(' TIMEZONE ')' { $$ = $2 }
+
+tz_or_offset:
+    timezone { $$ = $1 }
   | tzoffset { $$ = $1 }
+  | timezone tzoffset { $$ = $2 }
+  | tzoffset timezone { $$ = $1 }
 
 tzoffset:
     sign NUM2 { $$ = $1 * $2 * 3600}
@@ -272,14 +278,11 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 
 	// Return other symbols as individual tokens
 	if len(token) == 1 {
-		if rune(token[0]) == '+' {
-			return '+'
-		}
-		if rune(token[0]) == '-' {
-			return '-'
-		}
-		if rune(token[0]) == ':' {
-			return ':'
+		switch r := rune(token[0]); r {
+			case '+', '-', ':', '(', ')':
+				return int(r)
+			default:
+				//
 		}
 	}
 	return UNKNOWN
