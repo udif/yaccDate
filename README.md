@@ -13,7 +13,9 @@ yaccDate works by writing a generic date/time/timezone template using goYacc. Th
 Building from source
 --------------------
 ```
+cd yaccDate
 go generate
+cd ../main
 go build
 ```
 
