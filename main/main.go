@@ -1,3 +1,5 @@
+//go:generate go build -o yaccDateDemo main.go
+
 package main
 
 import (
@@ -5,11 +7,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/udif/yaccDate"
+	"github.com/udif/yaccDate/yaccDate"
 )
 
 func main() {
-	yaccDateDebug = 1
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("Enter text: ")

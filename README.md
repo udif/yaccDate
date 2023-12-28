@@ -10,13 +10,13 @@ How it works
 ------------
 yaccDate works by writing a generic date/time/timezone template using goYacc. The resulting code is much more efficient and can be easily fixed to add more variations.
 
-Building from source
+Building demo from source
 --------------------
 ```
 cd yaccDate
 go generate
 cd ../main
-go build
+go generate
 ```
 
 Using the package
