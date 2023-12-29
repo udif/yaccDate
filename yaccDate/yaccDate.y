@@ -22,7 +22,14 @@ import (
 	"strconv"
 	"time"
 	"unicode"
+	"github.com/tkuchiki/go-timezone"
 )
+
+type timeDateInfo struct {
+	arr [7]int
+	tz  string
+	off bool // true if offset to be used, overrides tz
+}
 
 %}
 
@@ -35,13 +42,13 @@ import (
 	// 5 - year
 	// 6 - timezone offset (seconds)
 	ival int
-	arr [7]int
+	tdi timeDateInfo
 }
 
 %token NUM2 NUM4 WEEKDAY MONTH TIMEZONE '+' '-' ':' '(' ')' UNKNOWN
 
-%type <arr>  top date_string datetime2 datetime date time
-%type <ival> year month day second minute hour sign tzoffset timezone tz_or_offset TIMEZONE NUM2 NUM4 MONTH
+%type <tdi>  top date_string datetime2 datetime date time timezone TIMEZONE
+%type <ival> year month day second minute hour sign tzoffset tzoffset2  NUM2 NUM4 MONTH
 
 %%
 
@@ -52,10 +59,15 @@ top:
 	}
 
 date_string:
-    datetime2 tz_or_offset
+    datetime2 tzoffset2
 	{
 		$$ = $1
-		$$[6] = $2
+		$$.arr[6] = $2
+	}
+  | datetime2 timezone
+	{
+		$$ = $1
+		$$.tz = $2.tz
 	}
   | datetime2 { $$ = $1 }
 
@@ -66,21 +78,21 @@ datetime2:
 datetime:
 	date time
 	{
-		$$[0] = $2[0]
-		$$[1] = $2[1]
-		$$[2] = $2[2]
-		$$[3] = $1[3]
-		$$[4] = $1[4]
-		$$[5] = $1[5]
+		$$.arr[0] = $2.arr[0]
+		$$.arr[1] = $2.arr[1]
+		$$.arr[2] = $2.arr[2]
+		$$.arr[3] = $1.arr[3]
+		$$.arr[4] = $1.arr[4]
+		$$.arr[5] = $1.arr[5]
 	}
 
 timezone:
     TIMEZONE { $$ = $1 }
   | '(' TIMEZONE ')' { $$ = $2 }
 
-tz_or_offset:
-    timezone { $$ = $1 }
-  | tzoffset { $$ = $1 }
+// combinations of timezone and tzoffset, where tzoffset takes precedence
+tzoffset2:
+    tzoffset { $$ = $1 }
   | timezone tzoffset { $$ = $2 }
   | tzoffset timezone { $$ = $1 }
 
@@ -99,9 +111,9 @@ weekday:
 time:
 	hour ':' minute ':' second
 	{
-		$$[0] = $5
-		$$[1] = $3
-		$$[2] = $1
+		$$.arr[0] = $5
+		$$.arr[1] = $3
+		$$.arr[2] = $1
 	}
 	
 
@@ -112,15 +124,15 @@ second: NUM2 { $$ = $1 }
 date:
     day '-' month '-' year
 	{
-		$$[5] = $5
-		$$[4] = $3
-		$$[3] = $1
+		$$.arr[5] = $5
+		$$.arr[4] = $3
+		$$.arr[3] = $1
 	}
   | day     month     year
 	{
-		$$[5] = $3
-		$$[4] = $2
-		$$[3] = $1
+		$$.arr[5] = $3
+		$$.arr[4] = $2
+		$$.arr[3] = $1
 	}
 
 day:
@@ -163,30 +175,17 @@ var monthNames = map[string]time.Month{
 	// Add more month names as needed
 }
 
-var timeZones = map[string]int{
-	"PST": -8 * 60 * 60,
-	"PDT": -7 * 60 * 60,
-	"EST": -5 * 60 * 60,
-	"EDT": -4 * 60 * 60,
-	"CST": -6 * 60 * 60,
-	"CDT": -5 * 60 * 60,
-	"MST": -7 * 60 * 60,
-	"MDT": -6 * 60 * 60,
-	"UTC": 0,
-	"UT":  0,
-	"GMT": 0,
-	// Add more time zones as needed
-}
-
 type Lexer struct {
-	result [7]int
+	result timeDateInfo
 	scanner *bufio.Scanner
+	tz *timezone.Timezone
 }
 
 func NewLexer(input string) *Lexer {
 	scanner := bufio.NewScanner(strings.NewReader(input))
+	tz := timezone.New()
 	scanner.Split(customSplit)
-	return &Lexer{scanner: scanner}
+	return &Lexer{scanner: scanner, tz: tz}
 }
 
 func customSplit(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -271,10 +270,13 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 	}
 
 	// Check for time zones
-	if offset, ok := timeZones[strings.ToUpper(token)]; ok {
-		lval.ival = offset
+	// we don't calculate it ourselves because its offset may depend on the date (daylight saving time)
+    tzAbbrInfos, _ := l.tz.GetTzAbbreviationInfo(strings.ToUpper(token))
+    if len(tzAbbrInfos) > 0 {
+		lval.tdi.tz = strings.ToUpper(token)
+		fmt.Println("TZ: ", token)
 		return TIMEZONE
-	}
+    }
 
 	// Return other symbols as individual tokens
 	if len(token) == 1 {
@@ -285,6 +287,7 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 				//
 		}
 	}
+	fmt.Println("No TZ: ", token)
 	return UNKNOWN
 }
 
@@ -293,11 +296,16 @@ func (l *Lexer) Error(e string) {
 }
 
 func FlexDateToTime(dateStr string) time.Time {
+	var myZone *time.Location
 	lexer := NewLexer(dateStr)
 	if yaccDateParse(lexer) == 1 {
 		log.Fatal("Cannot parse date:", dateStr)
 		os.Exit(1)
 	}
-	myzone := time.FixedZone("my_time_zone", lexer.result[6])
-	return time.Date(lexer.result[5], time.Month(lexer.result[4]), lexer.result[3], lexer.result[2], lexer.result[1], lexer.result[0], 0, myzone)
+	if lexer.result.tz != "" {
+		myZone = time.FixedZone(lexer.result.tz, 0)
+	} else {
+		myZone = time.FixedZone("UTC", lexer.result.arr[6])
+	}
+	return time.Date(lexer.result.arr[5], time.Month(lexer.result.arr[4]), lexer.result.arr[3], lexer.result.arr[2], lexer.result.arr[1], lexer.result.arr[0], 0, myZone)
 }

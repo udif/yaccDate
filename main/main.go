@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 
+	_ "time/tzdata"
+
 	"github.com/udif/yaccDate/yaccDate"
 )
 
