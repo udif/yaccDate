@@ -10,10 +10,9 @@ import __yyfmt__ "fmt"
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"github.com/tkuchiki/go-timezone"
-	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -26,7 +25,7 @@ type timeDateInfo struct {
 	off bool // true if offset to be used, overrides tz
 }
 
-//line yaccDate.y:36
+//line yaccDate.y:35
 type yaccDateSymType struct {
 	yys int
 	// 0 - sec
@@ -71,7 +70,7 @@ const yaccDateEofCode = 1
 const yaccDateErrCode = 2
 const yaccDateInitialStackSize = 16
 
-//line yaccDate.y:155
+//line yaccDate.y:154
 
 var weekDays = map[string]int{
 	"sun": 0,
@@ -220,19 +219,18 @@ func (l *Lexer) Error(e string) {
 	fmt.Printf("Error: %s\n", e)
 }
 
-func FlexDateToTime(dateStr string) time.Time {
+func FlexDateToTime(dateStr string) (time.Time, error) {
 	var myZone *time.Location
 	lexer := NewLexer(dateStr)
 	if yaccDateParse(lexer) == 1 {
-		log.Fatal("Cannot parse date:", dateStr)
-		os.Exit(1)
+		return time.Time{}, errors.New("Cannot parse date")
 	}
 	if lexer.result.tz != "" {
 		myZone = time.FixedZone(lexer.result.tz, 0)
 	} else {
 		myZone = time.FixedZone("UTC", lexer.result.arr[6])
 	}
-	return time.Date(lexer.result.arr[5], time.Month(lexer.result.arr[4]), lexer.result.arr[3], lexer.result.arr[2], lexer.result.arr[1], lexer.result.arr[0], 0, myZone)
+	return time.Date(lexer.result.arr[5], time.Month(lexer.result.arr[4]), lexer.result.arr[3], lexer.result.arr[2], lexer.result.arr[1], lexer.result.arr[0], 0, myZone), nil
 }
 
 //line yacctab:1
@@ -660,45 +658,45 @@ yaccDatedefault:
 
 	case 1:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:57
+//line yaccDate.y:56
 		{
 			yaccDatelex.(*Lexer).result = yaccDateVAL.tdi
 		}
 	case 2:
 		yaccDateDollar = yaccDateS[yaccDatept-2 : yaccDatept+1]
-//line yaccDate.y:63
+//line yaccDate.y:62
 		{
 			yaccDateVAL.tdi = yaccDateDollar[1].tdi
 			yaccDateVAL.tdi.arr[6] = yaccDateDollar[2].ival
 		}
 	case 3:
 		yaccDateDollar = yaccDateS[yaccDatept-2 : yaccDatept+1]
-//line yaccDate.y:68
+//line yaccDate.y:67
 		{
 			yaccDateVAL.tdi = yaccDateDollar[1].tdi
 			yaccDateVAL.tdi.tz = yaccDateDollar[2].tdi.tz
 		}
 	case 4:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:72
+//line yaccDate.y:71
 		{
 			yaccDateVAL.tdi = yaccDateDollar[1].tdi
 		}
 	case 5:
 		yaccDateDollar = yaccDateS[yaccDatept-2 : yaccDatept+1]
-//line yaccDate.y:75
+//line yaccDate.y:74
 		{
 			yaccDateVAL.tdi = yaccDateDollar[2].tdi
 		}
 	case 6:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:76
+//line yaccDate.y:75
 		{
 			yaccDateVAL.tdi = yaccDateDollar[1].tdi
 		}
 	case 7:
 		yaccDateDollar = yaccDateS[yaccDatept-2 : yaccDatept+1]
-//line yaccDate.y:80
+//line yaccDate.y:79
 		{
 			yaccDateVAL.tdi.arr[0] = yaccDateDollar[2].tdi.arr[0]
 			yaccDateVAL.tdi.arr[1] = yaccDateDollar[2].tdi.arr[1]
@@ -709,67 +707,67 @@ yaccDatedefault:
 		}
 	case 8:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:90
+//line yaccDate.y:89
 		{
 			yaccDateVAL.tdi = yaccDateDollar[1].tdi
 		}
 	case 9:
 		yaccDateDollar = yaccDateS[yaccDatept-3 : yaccDatept+1]
-//line yaccDate.y:91
+//line yaccDate.y:90
 		{
 			yaccDateVAL.tdi = yaccDateDollar[2].tdi
 		}
 	case 10:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:95
+//line yaccDate.y:94
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 11:
 		yaccDateDollar = yaccDateS[yaccDatept-2 : yaccDatept+1]
-//line yaccDate.y:96
+//line yaccDate.y:95
 		{
 			yaccDateVAL.ival = yaccDateDollar[2].ival
 		}
 	case 12:
 		yaccDateDollar = yaccDateS[yaccDatept-2 : yaccDatept+1]
-//line yaccDate.y:97
+//line yaccDate.y:96
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 13:
 		yaccDateDollar = yaccDateS[yaccDatept-2 : yaccDatept+1]
-//line yaccDate.y:100
+//line yaccDate.y:99
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival * yaccDateDollar[2].ival * 3600
 		}
 	case 14:
 		yaccDateDollar = yaccDateS[yaccDatept-2 : yaccDatept+1]
-//line yaccDate.y:101
+//line yaccDate.y:100
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival*((yaccDateDollar[2].ival/100)*3600) + (yaccDateDollar[2].ival%100)*60
 		}
 	case 15:
 		yaccDateDollar = yaccDateS[yaccDatept-4 : yaccDatept+1]
-//line yaccDate.y:102
+//line yaccDate.y:101
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival * (yaccDateDollar[2].ival*3600 + yaccDateDollar[4].ival*60)
 		}
 	case 16:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:105
+//line yaccDate.y:104
 		{
 			yaccDateVAL.ival = 1
 		}
 	case 17:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:106
+//line yaccDate.y:105
 		{
 			yaccDateVAL.ival = -1
 		}
 	case 19:
 		yaccDateDollar = yaccDateS[yaccDatept-5 : yaccDatept+1]
-//line yaccDate.y:113
+//line yaccDate.y:112
 		{
 			yaccDateVAL.tdi.arr[0] = yaccDateDollar[5].ival
 			yaccDateVAL.tdi.arr[1] = yaccDateDollar[3].ival
@@ -777,25 +775,25 @@ yaccDatedefault:
 		}
 	case 20:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:120
+//line yaccDate.y:119
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 21:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:121
+//line yaccDate.y:120
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 22:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:122
+//line yaccDate.y:121
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 23:
 		yaccDateDollar = yaccDateS[yaccDatept-5 : yaccDatept+1]
-//line yaccDate.y:126
+//line yaccDate.y:125
 		{
 			yaccDateVAL.tdi.arr[5] = yaccDateDollar[1].ival
 			yaccDateVAL.tdi.arr[4] = yaccDateDollar[3].ival
@@ -803,7 +801,7 @@ yaccDatedefault:
 		}
 	case 24:
 		yaccDateDollar = yaccDateS[yaccDatept-5 : yaccDatept+1]
-//line yaccDate.y:132
+//line yaccDate.y:131
 		{
 			yaccDateVAL.tdi.arr[5] = yaccDateDollar[5].ival
 			yaccDateVAL.tdi.arr[4] = yaccDateDollar[3].ival
@@ -811,7 +809,7 @@ yaccDatedefault:
 		}
 	case 25:
 		yaccDateDollar = yaccDateS[yaccDatept-3 : yaccDatept+1]
-//line yaccDate.y:138
+//line yaccDate.y:137
 		{
 			yaccDateVAL.tdi.arr[5] = yaccDateDollar[3].ival
 			yaccDateVAL.tdi.arr[4] = yaccDateDollar[2].ival
@@ -819,31 +817,31 @@ yaccDatedefault:
 		}
 	case 26:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:145
+//line yaccDate.y:144
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 27:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:148
+//line yaccDate.y:147
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 28:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:149
+//line yaccDate.y:148
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 29:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:152
+//line yaccDate.y:151
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 30:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:153
+//line yaccDate.y:152
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}

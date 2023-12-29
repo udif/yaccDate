@@ -17,6 +17,11 @@ func main() {
 	for {
 		fmt.Print("Enter text: ")
 		text, _ := reader.ReadString('\n')
-		fmt.Println(yaccDate.FlexDateToTime(text))
+		d, err := yaccDate.FlexDateToTime(text)
+		if err == nil {
+			fmt.Println(d)
+		} else {
+			fmt.Println(err)
+		}
 	}
 }

@@ -15,9 +15,8 @@ package yaccDate
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
-	"log"
-	"os"
 	"strings"
 	"strconv"
 	"time"
@@ -301,17 +300,16 @@ func (l *Lexer) Error(e string) {
 	fmt.Printf("Error: %s\n", e)
 }
 
-func FlexDateToTime(dateStr string) time.Time {
+func FlexDateToTime(dateStr string) (time.Time, error) {
 	var myZone *time.Location
 	lexer := NewLexer(dateStr)
 	if yaccDateParse(lexer) == 1 {
-		log.Fatal("Cannot parse date:", dateStr)
-		os.Exit(1)
+		return time.Time{}, errors.New("Cannot parse date")
 	}
 	if lexer.result.tz != "" {
 		myZone = time.FixedZone(lexer.result.tz, 0)
 	} else {
 		myZone = time.FixedZone("UTC", lexer.result.arr[6])
 	}
-	return time.Date(lexer.result.arr[5], time.Month(lexer.result.arr[4]), lexer.result.arr[3], lexer.result.arr[2], lexer.result.arr[1], lexer.result.arr[0], 0, myZone)
+	return time.Date(lexer.result.arr[5], time.Month(lexer.result.arr[4]), lexer.result.arr[3], lexer.result.arr[2], lexer.result.arr[1], lexer.result.arr[0], 0, myZone), nil
 }
