@@ -205,7 +205,7 @@ func customSplit(data []byte, atEOF bool) (advance int, token []byte, err error)
 	if unicode.IsLetter(rune(data[start])) {
 		for j := start + 1; j < len(data); j++ {
 			if !unicode.IsLetter(rune(data[j])) {
-				fmt.Println(j, data[start:j],)
+				//fmt.Println(j, data[start:j],)
 				return j, data[start:j], nil
 			}
 		}
@@ -213,13 +213,13 @@ func customSplit(data []byte, atEOF bool) (advance int, token []byte, err error)
 	// If we see a digit, consume as a number.
 		for j := start + 1; j < len(data); j++ {
 			if !unicode.IsDigit(rune(data[j])) {
-				fmt.Println(j, data[start:j],)
+				//fmt.Println(j, data[start:j],)
 				return j, data[start:j], nil
 			}
 		}
 	} else {
 		// Otherwise, consume as a single rune.
-		fmt.Println(start + 1, data[start])
+		//fmt.Println(start + 1, data[start])
 		return start + 1, data[start:start+1], nil
 	}
 	// Return the remaining bytes if we're at EOF.
@@ -274,7 +274,7 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
     tzAbbrInfos, _ := l.tz.GetTzAbbreviationInfo(strings.ToUpper(token))
     if len(tzAbbrInfos) > 0 {
 		lval.tdi.tz = strings.ToUpper(token)
-		fmt.Println("TZ: ", token)
+		//fmt.Println("TZ: ", token)
 		return TIMEZONE
     }
 
@@ -287,7 +287,7 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 				//
 		}
 	}
-	fmt.Println("No TZ: ", token)
+	//fmt.Println("No TZ: ", token)
 	return UNKNOWN
 }
 
