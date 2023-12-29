@@ -61,6 +61,7 @@ var yaccDateToknames = [...]string{
 	"':'",
 	"'('",
 	"')'",
+	"'/'",
 	"UNKNOWN",
 }
 
@@ -70,7 +71,7 @@ const yaccDateEofCode = 1
 const yaccDateErrCode = 2
 const yaccDateInitialStackSize = 16
 
-//line yaccDate.y:149
+//line yaccDate.y:155
 
 var weekDays = map[string]int{
 	"sun": 0,
@@ -205,7 +206,7 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 	// Return other symbols as individual tokens
 	if len(token) == 1 {
 		switch r := rune(token[0]); r {
-		case '+', '-', ':', '(', ')':
+		case '+', '-', ':', '(', ')', '/':
 			return int(r)
 		default:
 			//
@@ -239,60 +240,68 @@ var yaccDateExca = [...]int8{
 	-1, 1,
 	1, -1,
 	-2, 0,
+	-1, 10,
+	14, 29,
+	-2, 26,
 }
 
 const yaccDatePrivate = 57344
 
-const yaccDateLast = 52
+const yaccDateLast = 60
 
 var yaccDateAct = [...]int8{
-	33, 23, 13, 16, 17, 36, 14, 13, 11, 25,
-	12, 14, 24, 42, 37, 22, 28, 31, 16, 17,
-	40, 27, 26, 25, 32, 9, 24, 6, 34, 35,
-	29, 30, 5, 45, 41, 39, 21, 18, 9, 4,
-	10, 43, 15, 20, 38, 44, 8, 19, 7, 3,
-	2, 1,
+	8, 13, 9, 26, 15, 18, 19, 43, 16, 24,
+	14, 39, 28, 15, 46, 27, 30, 16, 25, 31,
+	40, 34, 18, 19, 29, 44, 51, 37, 35, 36,
+	28, 38, 11, 27, 10, 11, 6, 32, 33, 10,
+	11, 48, 5, 45, 42, 49, 47, 20, 23, 4,
+	12, 17, 22, 41, 50, 21, 7, 3, 2, 1,
 }
 
 var yaccDatePact = [...]int16{
-	21, -1000, -1000, -6, 34, -1000, -1000, 32, 5, -1000,
-	-1000, 9, -1, -1000, 8, 26, -1000, -1000, -1000, -1000,
-	6, -1000, 19, 24, -1000, -1000, -1000, -1000, -8, 3,
-	-1000, 31, 10, -1000, -1000, -1000, -1000, 30, 2, -1000,
-	24, -1000, 29, -1000, -1000, -1000,
+	30, -1000, -1000, -4, 35, -1000, -1000, 44, -5, 8,
+	-1000, -1000, -1000, 13, 5, -1000, 11, 33, -1000, -1000,
+	-1000, -1000, 10, -1000, 26, 26, 27, -1000, -1000, -1000,
+	-1000, -2, 9, -1000, 40, -7, 15, -1000, -1000, -1000,
+	39, 3, -1000, 37, 27, -1000, 22, -1000, -1000, -1000,
+	-1000, -1000,
 }
 
 var yaccDatePgo = [...]int8{
-	0, 51, 50, 49, 32, 48, 47, 8, 0, 1,
-	46, 45, 44, 43, 42, 10, 40, 39,
+	0, 59, 58, 57, 42, 56, 55, 1, 0, 3,
+	2, 54, 53, 52, 51, 10, 50, 49,
 }
 
 var yaccDateR1 = [...]int8{
 	0, 1, 2, 2, 2, 3, 3, 4, 7, 7,
 	16, 16, 16, 15, 15, 15, 14, 14, 17, 6,
-	13, 12, 11, 5, 5, 10, 9, 9, 8, 8,
+	13, 12, 11, 5, 5, 5, 10, 9, 9, 8,
+	8,
 }
 
 var yaccDateR2 = [...]int8{
 	0, 1, 2, 2, 1, 2, 1, 2, 1, 3,
 	1, 2, 2, 2, 2, 4, 1, 1, 1, 5,
-	1, 1, 1, 5, 3, 1, 1, 1, 1, 1,
+	1, 1, 1, 5, 5, 3, 1, 1, 1, 1,
+	1,
 }
 
 var yaccDateChk = [...]int16{
-	-1000, -1, -2, -3, -17, -4, 6, -5, -10, 4,
-	-16, -7, -15, 8, 12, -14, 9, 10, -4, -6,
-	-13, 4, 10, -9, 7, 4, -15, -7, 8, 4,
-	5, 11, -9, -8, 4, 5, 13, 11, -12, 4,
-	10, 4, 11, -8, -11, 4,
+	-1000, -1, -2, -3, -17, -4, 6, -5, -8, -10,
+	4, 5, -16, -7, -15, 8, 12, -14, 9, 10,
+	-4, -6, -13, 4, 14, 10, -9, 7, 4, -15,
+	-7, 8, 4, 5, 11, -9, -9, -8, 4, 13,
+	11, -12, 4, 14, 10, 4, 11, -10, 4, -8,
+	-11, 4,
 }
 
 var yaccDateDef = [...]int8{
-	0, -2, 1, 4, 0, 6, 18, 0, 0, 25,
-	2, 3, 10, 8, 0, 0, 16, 17, 5, 7,
-	0, 20, 0, 0, 26, 27, 11, 12, 0, 13,
-	14, 0, 0, 24, 28, 29, 9, 0, 0, 21,
-	0, 15, 0, 23, 19, 22,
+	0, -2, 1, 4, 0, 6, 18, 0, 0, 0,
+	-2, 30, 2, 3, 10, 8, 0, 0, 16, 17,
+	5, 7, 0, 20, 0, 0, 0, 27, 28, 11,
+	12, 0, 13, 14, 0, 0, 0, 25, 29, 9,
+	0, 0, 21, 0, 0, 15, 0, 23, 26, 24,
+	19, 22,
 }
 
 var yaccDateTok1 = [...]int8{
@@ -300,12 +309,12 @@ var yaccDateTok1 = [...]int8{
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	12, 13, 3, 9, 3, 10, 3, 3, 3, 3,
+	12, 13, 3, 9, 3, 10, 3, 14, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 11,
 }
 
 var yaccDateTok2 = [...]int8{
-	2, 3, 4, 5, 6, 7, 8, 14,
+	2, 3, 4, 5, 6, 7, 8, 15,
 }
 
 var yaccDateTok3 = [...]int8{
@@ -788,45 +797,53 @@ yaccDatedefault:
 		yaccDateDollar = yaccDateS[yaccDatept-5 : yaccDatept+1]
 //line yaccDate.y:126
 		{
+			yaccDateVAL.tdi.arr[5] = yaccDateDollar[1].ival
+			yaccDateVAL.tdi.arr[4] = yaccDateDollar[3].ival
+			yaccDateVAL.tdi.arr[3] = yaccDateDollar[5].ival
+		}
+	case 24:
+		yaccDateDollar = yaccDateS[yaccDatept-5 : yaccDatept+1]
+//line yaccDate.y:132
+		{
 			yaccDateVAL.tdi.arr[5] = yaccDateDollar[5].ival
 			yaccDateVAL.tdi.arr[4] = yaccDateDollar[3].ival
 			yaccDateVAL.tdi.arr[3] = yaccDateDollar[1].ival
 		}
-	case 24:
+	case 25:
 		yaccDateDollar = yaccDateS[yaccDatept-3 : yaccDatept+1]
-//line yaccDate.y:132
+//line yaccDate.y:138
 		{
 			yaccDateVAL.tdi.arr[5] = yaccDateDollar[3].ival
 			yaccDateVAL.tdi.arr[4] = yaccDateDollar[2].ival
 			yaccDateVAL.tdi.arr[3] = yaccDateDollar[1].ival
 		}
-	case 25:
-		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:139
-		{
-			yaccDateVAL.ival = yaccDateDollar[1].ival
-		}
 	case 26:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:142
+//line yaccDate.y:145
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 27:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:143
+//line yaccDate.y:148
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 28:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:146
+//line yaccDate.y:149
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}
 	case 29:
 		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
-//line yaccDate.y:147
+//line yaccDate.y:152
+		{
+			yaccDateVAL.ival = yaccDateDollar[1].ival
+		}
+	case 30:
+		yaccDateDollar = yaccDateS[yaccDatept-1 : yaccDatept+1]
+//line yaccDate.y:153
 		{
 			yaccDateVAL.ival = yaccDateDollar[1].ival
 		}

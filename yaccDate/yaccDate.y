@@ -45,7 +45,7 @@ type timeDateInfo struct {
 	tdi timeDateInfo
 }
 
-%token NUM2 NUM4 WEEKDAY MONTH TIMEZONE '+' '-' ':' '(' ')' UNKNOWN
+%token NUM2 NUM4 WEEKDAY MONTH TIMEZONE '+' '-' ':' '(' ')' '/' UNKNOWN
 
 %type <tdi>  top date_string datetime2 datetime date time timezone TIMEZONE
 %type <ival> year month day second minute hour sign tzoffset tzoffset2  NUM2 NUM4 MONTH
@@ -122,7 +122,13 @@ minute: NUM2 { $$ = $1 }
 second: NUM2 { $$ = $1 }
 
 date:
-    day '-' month '-' year
+    year '/' month '/' day
+	{
+		$$.arr[5] = $1
+		$$.arr[4] = $3
+		$$.arr[3] = $5
+	}
+  | day '-' month '-' year
 	{
 		$$.arr[5] = $5
 		$$.arr[4] = $3
@@ -281,7 +287,7 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 	// Return other symbols as individual tokens
 	if len(token) == 1 {
 		switch r := rune(token[0]); r {
-			case '+', '-', ':', '(', ')':
+			case '+', '-', ':', '(', ')', '/':
 				return int(r)
 			default:
 				//
