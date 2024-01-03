@@ -15,6 +15,7 @@ package yaccDate
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -25,9 +26,13 @@ import (
 )
 
 type timeDateInfo struct {
-	arr [7]int
-	tz  string
-	off bool // true if offset to be used, overrides tz
+	sec, min, hour int
+	day, month, year int
+	offset int
+	tz  []*timezone.TzAbbreviationInfo // 3-letter timezone converted
+	tz3 string // if 3-letter timezone
+	mime string // if MIME string 
+	offset_1st bool // true if offset appeared first
 }
 
 %}
@@ -44,10 +49,10 @@ type timeDateInfo struct {
 	tdi timeDateInfo
 }
 
-%token NUM2 NUM4 WEEKDAY MONTH TIMEZONE '+' '-' ':' '(' ')' '/' UNKNOWN
+%token NUM2 NUM4 WEEKDAY MONTH TIMEZONE TIMEZONE0 UNKNOWN MIME '+' '-' ':' '(' ')' '/' '='
 
-%type <tdi>  top date_string datetime2 datetime date time timezone TIMEZONE
-%type <ival> year month day second minute hour sign tzoffset tzoffset2  NUM2 NUM4 MONTH
+%type <tdi>  top date_string datetime2 datetime date time timezone TIMEZONE TIMEZONE0 MIME
+%type <ival> year month day second minute hour sign tzoffset NUM2 NUM4 MONTH
 
 %%
 
@@ -58,15 +63,40 @@ top:
 	}
 
 date_string:
-    datetime2 tzoffset2
+    datetime2 tzoffset '(' MIME ')'
 	{
 		$$ = $1
-		$$.arr[6] = $2
+		$$.offset = $2
+		$$.mime = $4.mime
+		$$.offset_1st = true
+	}
+  | datetime2 tzoffset timezone
+	{
+		$$ = $1
+		$$.offset = $2
+		$$.tz = $3.tz
+		$$.tz3 = $3.tz3
+		$$.offset_1st = true
+	}
+  | datetime2 tzoffset
+	{
+		$$ = $1
+		$$.offset = $2
+		$$.offset_1st = true
+	}
+  | datetime2 timezone tzoffset
+	{
+		$$ = $1
+		$$.tz = $2.tz
+		$$.tz3 = $2.tz3
+		$$.offset = $3
+		$$.offset_1st = false
 	}
   | datetime2 timezone
 	{
 		$$ = $1
 		$$.tz = $2.tz
+		$$.tz3 = $2.tz3
 	}
   | datetime2 { $$ = $1 }
 
@@ -77,23 +107,24 @@ datetime2:
 datetime:
 	date time
 	{
-		$$.arr[0] = $2.arr[0]
-		$$.arr[1] = $2.arr[1]
-		$$.arr[2] = $2.arr[2]
-		$$.arr[3] = $1.arr[3]
-		$$.arr[4] = $1.arr[4]
-		$$.arr[5] = $1.arr[5]
+		$$.sec   = $2.sec
+		$$.min   = $2.min
+		$$.hour  = $2.hour
+		$$.day   = $1.day
+		$$.month = $1.month
+		$$.year  = $1.year
 	}
 
 timezone:
     TIMEZONE { $$ = $1 }
+  | TIMEZONE0 { $$ = $1 }
   | '(' TIMEZONE ')' { $$ = $2 }
-
-// combinations of timezone and tzoffset, where tzoffset takes precedence
-tzoffset2:
-    tzoffset { $$ = $1 }
-  | timezone tzoffset { $$ = $2 }
-  | tzoffset timezone { $$ = $1 }
+  | '(' TIMEZONE0 ')' { $$ = $2 }
+  | '(' TIMEZONE0 tzoffset ')'
+	{
+		$$ = $2
+		$$.offset = $3
+	}
 
 tzoffset:
     sign NUM2 { $$ = $1 * $2 * 3600}
@@ -110,9 +141,9 @@ weekday:
 time:
 	hour ':' minute ':' second
 	{
-		$$.arr[0] = $5
-		$$.arr[1] = $3
-		$$.arr[2] = $1
+		$$.sec = $5
+		$$.min = $3
+		$$.hour = $1
 	}
 	
 
@@ -123,21 +154,21 @@ second: NUM2 { $$ = $1 }
 date:
     year '/' month '/' day
 	{
-		$$.arr[5] = $1
-		$$.arr[4] = $3
-		$$.arr[3] = $5
+		$$.year  = $1
+		$$.month = $3
+		$$.day   = $5
 	}
   | day '-' month '-' year
 	{
-		$$.arr[5] = $5
-		$$.arr[4] = $3
-		$$.arr[3] = $1
+		$$.year  = $5
+		$$.month = $3
+		$$.day   = $1
 	}
   | day     month     year
 	{
-		$$.arr[5] = $3
-		$$.arr[4] = $2
-		$$.arr[3] = $1
+		$$.year  = $3
+		$$.month = $2
+		$$.day   = $1
 	}
 
 day:
@@ -193,7 +224,13 @@ func NewLexer(input string) *Lexer {
 	return &Lexer{scanner: scanner, tz: tz}
 }
 
+// enable/disable this as needed
+func dbg(args ...interface{}) {
+    //fmt.Println(args...)
+}
+
 func customSplit(data []byte, atEOF bool) (advance int, token []byte, err error) {
+
 	// Skip leading spaces or commas.
 	start := 0
 	for ; start < len(data); start++ {
@@ -210,7 +247,7 @@ func customSplit(data []byte, atEOF bool) (advance int, token []byte, err error)
 	if unicode.IsLetter(rune(data[start])) {
 		for j := start + 1; j < len(data); j++ {
 			if !unicode.IsLetter(rune(data[j])) {
-				//fmt.Println(j, data[start:j],)
+				dbg(j, data[start:j],)
 				return j, data[start:j], nil
 			}
 		}
@@ -218,13 +255,18 @@ func customSplit(data []byte, atEOF bool) (advance int, token []byte, err error)
 	// If we see a digit, consume as a number.
 		for j := start + 1; j < len(data); j++ {
 			if !unicode.IsDigit(rune(data[j])) {
-				//fmt.Println(j, data[start:j],)
+				dbg(j, data[start:j],)
 				return j, data[start:j], nil
 			}
 		}
+	} else if data[start] == '=' && data[start+1] == '?' {
+		if i := bytes.Index(data[start+2:], []byte("?=")); i >= 0 {
+			j := start + i + 4
+			return j, data[start:j], nil
+		}
 	} else {
 		// Otherwise, consume as a single rune.
-		//fmt.Println(start + 1, data[start])
+		dbg(start + 1, data[start])
 		return start + 1, data[start:start+1], nil
 	}
 	// Return the remaining bytes if we're at EOF.
@@ -248,8 +290,10 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 	if le <= 2 && unicode.IsDigit(rune(token[0])) && (le == 1 || unicode.IsDigit(rune(token[1]))) {
 		lval.ival, err = strconv.Atoi(token)
 		if err != nil {
+			dbg("UNKNOWN")
 			return UNKNOWN
 		}
+		dbg("NUM2", lval.ival)
 		return NUM2
 	}
 
@@ -257,20 +301,30 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 	if len(token) == 4 && unicode.IsDigit(rune(token[0])) && unicode.IsDigit(rune(token[1])) && unicode.IsDigit(rune(token[2])) && unicode.IsDigit(rune(token[3])) {
 		lval.ival, err = strconv.Atoi(token)
 		if err != nil {
+			dbg("UNKNOWN")
 			return UNKNOWN
 		}
+		dbg("NUM4", lval.ival)
 		return NUM4
+	}
+
+	if len(token) >= 4 && token[0] == '=' {
+		lval.tdi.tz3 = token
+		dbg("MIME: ", token)
+		return MIME
 	}
 
 	// Check for week days
 	if day, ok := weekDays[strings.ToLower(token)]; ok {
 		lval.ival = day
+		dbg("WEEKDAY", lval.ival)
 		return WEEKDAY
 	}
 
 	// Check for month names
 	if month, ok := monthNames[strings.ToLower(token)]; ok {
 		lval.ival = int(month)
+		dbg("MONTH", lval.ival)
 		return MONTH
 	}
 
@@ -278,21 +332,31 @@ func (l *Lexer) Lex(lval *yaccDateSymType) int {
 	// we don't calculate it ourselves because its offset may depend on the date (daylight saving time)
     tzAbbrInfos, _ := l.tz.GetTzAbbreviationInfo(strings.ToUpper(token))
     if len(tzAbbrInfos) > 0 {
-		lval.tdi.tz = strings.ToUpper(token)
-		//fmt.Println("TZ: ", token)
+		lval.tdi.tz = tzAbbrInfos
+		lval.tdi.tz3 = token
+		dbg("TZ: ", token)
+		if len(tzAbbrInfos) == 1 {
+			lval.tdi.offset = tzAbbrInfos[0].Offset()
+			if lval.tdi.offset == 0 {
+				return TIMEZONE0
+			} else {
+				return TIMEZONE
+			}
+		}
 		return TIMEZONE
     }
 
 	// Return other symbols as individual tokens
 	if len(token) == 1 {
 		switch r := rune(token[0]); r {
-			case '+', '-', ':', '(', ')', '/':
+			case '+', '-', ':', '(', ')', '/', '=':
+				dbg(token)
 				return int(r)
 			default:
 				//
 		}
 	}
-	//fmt.Println("No TZ: ", token)
+	dbg("No TZ: ", token)
 	return UNKNOWN
 }
 
@@ -306,10 +370,37 @@ func FlexDateToTime(dateStr string) (time.Time, error) {
 	if yaccDateParse(lexer) == 1 {
 		return time.Time{}, errors.New("Cannot parse date")
 	}
-	if lexer.result.tz != "" {
-		myZone = time.FixedZone(lexer.result.tz, 0)
-	} else {
-		myZone = time.FixedZone("UTC", lexer.result.arr[6])
+	if lexer.result.tz == nil {
+		// No TZ given. The code below covers both offset given and no offset
+		// Due to default initialization of  0 for lexer.result.offset
+		myZone = time.FixedZone("UTC", lexer.result.offset)
+	} else if !lexer.result.offset_1st { // offset last, we base on timezone
+		if len(lexer.result.tz) > 1 {
+			// timezone 1st, we plan to rely on it
+			// but with more than one timezone matches, we don;t know which
+			return time.Time{}, errors.New("Ambiguous timezones and no explicit offset")
+		} else if len(lexer.result.tz) == 1 {
+			// unambiguous timezone 1st, so we rely on it.
+			// If there is an additional +/-offset, we'll add it
+			myZone = time.FixedZone(lexer.result.tz3, lexer.result.tz[0].Offset() + lexer.result.offset)
+			dbg(lexer.result.tz3)
+		}
+	} else { // offset 1st, we base on offset and annotate with timezone
+		if len(lexer.result.tz) > 0 {
+			// toffset given as well as multiple time zones.
+			// we are OK if any of those matches the offset
+			for _, tz := range lexer.result.tz {
+				dbg(tz.Name())
+				if lexer.result.offset == tz.Offset() {
+					//myZone = time.FixedZone(tz.Name(), tz.Offset())
+					myZone = time.FixedZone(lexer.result.tz3, tz.Offset())
+					break
+				}
+			}
+			if myZone == nil {
+				return time.Time{}, errors.New("Timezone contradicts explicit offset given")
+			}
+		}
 	}
-	return time.Date(lexer.result.arr[5], time.Month(lexer.result.arr[4]), lexer.result.arr[3], lexer.result.arr[2], lexer.result.arr[1], lexer.result.arr[0], 0, myZone), nil
+	return time.Date(lexer.result.year, time.Month(lexer.result.month), lexer.result.day, lexer.result.hour, lexer.result.min, lexer.result.sec, 0, myZone), nil
 }
